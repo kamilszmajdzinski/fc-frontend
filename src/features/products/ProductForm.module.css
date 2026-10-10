@@ -1,0 +1,89 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.priceGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 130px;
+  gap: 16px;
+  align-items: start;
+}
+
+.priceHint {
+  grid-column: 2 / -1;
+  align-self: center;
+  padding-top: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--c-muted);
+}
+
+.preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  animation: fadeIn 0.2s;
+}
+
+.previewValue {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--c-text);
+}
+
+.previewSide {
+  text-align: right;
+  font-size: 14px;
+  color: var(--c-accent);
+}
+
+.previewFormula {
+  margin-top: 4px;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.cancel {
+  flex: 1;
+}
+
+.submit {
+  flex: 3;
+}
+
+@media (max-width: 560px) {
+  .priceGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .priceHint {
+    grid-column: 1 / -1;
+    padding-top: 0;
+  }
+
+  .preview {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .previewSide {
+    text-align: left;
+  }
+}

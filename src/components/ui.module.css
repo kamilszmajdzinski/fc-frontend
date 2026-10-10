@@ -1,0 +1,340 @@
+/* ---------- Buttons ---------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: var(--radius);
+  padding: 11px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.button:hover {
+  text-decoration: none;
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.primary {
+  background: var(--c-text);
+  color: var(--c-on-dark);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+}
+
+.danger {
+  background: var(--c-red-light);
+  color: var(--c-red);
+}
+
+.accent {
+  background: var(--c-accent-light);
+  color: var(--c-accent);
+}
+
+.small {
+  padding: 8px 14px;
+}
+
+.dimmed {
+  opacity: 0.45;
+}
+
+.pill {
+  border: none;
+  border-radius: var(--radius);
+  padding: 4px 12px;
+  background: var(--c-accent-light);
+  color: var(--c-accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pill:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: var(--c-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.iconButton:hover {
+  color: var(--c-red);
+}
+
+/* ---------- Form controls ---------- */
+
+.label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-label);
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  background: var(--c-white);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--c-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--c-label);
+  opacity: 0.8;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--c-text);
+}
+
+.input:disabled {
+  background: var(--c-surface);
+}
+
+.textarea {
+  min-height: 44px;
+  line-height: 1.5;
+  resize: vertical;
+  /* Grows with the text where supported; elsewhere it stays resizable. */
+  field-sizing: content;
+}
+
+.compact {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.invalid {
+  border-color: var(--c-red);
+}
+
+.selectWrap {
+  position: relative;
+  width: 100%;
+}
+
+.select {
+  /* Same height as text inputs so they line up in a row. */
+  padding: 10px 38px 10px 14px;
+  appearance: none;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.select.compact {
+  padding: 8px 28px 8px 10px;
+}
+
+.chevron {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--c-muted);
+}
+
+.select.compact + .chevron {
+  right: 9px;
+}
+
+.fieldError {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--c-red);
+}
+
+.hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--c-muted);
+  line-height: 1.5;
+}
+
+/* ---------- Cards and text ---------- */
+
+.card {
+  background: var(--c-surface);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+}
+
+.cardAccent {
+  background: var(--c-accent-light);
+}
+
+.cardTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-label);
+}
+
+.cardHeading {
+  font: inherit;
+}
+
+.cardActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-label);
+}
+
+.banner {
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.bannerError {
+  background: var(--c-red-light);
+  color: var(--c-red);
+}
+
+.bannerWarning {
+  background: var(--c-orange-light);
+  color: var(--c-orange);
+}
+
+/* ---------- Stat (KPI) cards ---------- */
+
+.stat {
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  background: var(--c-surface);
+  min-width: 0;
+}
+
+.statLabel {
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-label);
+}
+
+.statValue {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--c-text);
+  overflow-wrap: anywhere;
+}
+
+.statSub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--c-muted);
+}
+
+.statCompact {
+  padding: 16px;
+  border-radius: var(--radius);
+}
+
+.statCompact .statLabel {
+  font-size: 10px;
+  color: var(--c-muted);
+}
+
+.statCompact .statValue {
+  font-size: 20px;
+}
+
+.toneGreen {
+  background: var(--c-green-light);
+}
+
+.toneGreen .statLabel,
+.toneGreen .statValue,
+.toneGreen .statSub {
+  color: var(--c-green);
+}
+
+.toneRed {
+  background: var(--c-red-light);
+}
+
+.toneRed .statLabel,
+.toneRed .statValue,
+.toneRed .statSub {
+  color: var(--c-red);
+}
+
+.toneOrange {
+  background: var(--c-orange-light);
+}
+
+.toneOrange .statLabel,
+.toneOrange .statValue,
+.toneOrange .statSub {
+  color: var(--c-orange);
+}
+
+@media (max-width: 760px) {
+  .card {
+    padding: 20px 18px;
+  }
+
+  .statValue {
+    font-size: 22px;
+  }
+}

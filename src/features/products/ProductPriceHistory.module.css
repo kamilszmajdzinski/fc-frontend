@@ -1,0 +1,52 @@
+.muted {
+  font-size: 13px;
+  color: var(--c-muted);
+}
+
+.affected {
+  margin-top: 6px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--c-bg);
+}
+
+.affectedLabel {
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-label);
+}
+
+.recipes {
+  list-style: none;
+}
+
+.recipe {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.recipeName {
+  color: var(--c-text);
+}
+
+.recipeName:hover {
+  color: var(--c-accent);
+}
+
+.recipeCost {
+  white-space: nowrap;
+  color: var(--c-muted);
+}
+
+.recipeCost strong {
+  font-weight: 600;
+  color: var(--c-text);
+}

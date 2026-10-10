@@ -1,0 +1,105 @@
+.muted {
+  font-size: 13px;
+  color: var(--c-muted);
+}
+
+/* ---------- Activity and item history pages (full width, like the calculator) ---------- */
+
+.page {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 48px 48px;
+}
+
+.inner {
+  max-width: 920px;
+  animation: fadeSlide 0.2s;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-label);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--c-text);
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--c-muted);
+}
+
+.day {
+  margin-bottom: 18px;
+}
+
+.dayLabel {
+  margin: 0 0 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-label);
+}
+
+.dayCard {
+  padding: 20px 22px;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-muted);
+}
+
+.deleted {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--c-red-light);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: middle;
+  color: var(--c-red);
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 24px 16px 40px;
+  }
+
+  .dayCard {
+    padding: 18px 16px;
+  }
+}

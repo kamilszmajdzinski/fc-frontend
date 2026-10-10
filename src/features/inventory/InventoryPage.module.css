@@ -1,0 +1,228 @@
+/* ---------- List panel ---------- */
+
+.filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.filter {
+  flex: 1;
+  padding: 5px 4px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filterActive {
+  background: var(--c-accent);
+  color: var(--c-on-dark);
+}
+
+.summary {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+
+.summaryBox {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  text-align: left;
+  color: var(--c-text);
+}
+
+button.summaryBox {
+  cursor: pointer;
+}
+
+.summaryWide {
+  flex: 2;
+}
+
+.summaryLabel {
+  margin-bottom: 2px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.summaryValue {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.summaryAlert {
+  background: var(--c-red-light);
+}
+
+.summaryAlert .summaryLabel,
+.summaryAlert .summaryValue {
+  color: var(--c-red);
+}
+
+.outText {
+  color: var(--c-red);
+}
+
+/* ---------- Detail ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.panel {
+  padding: 22px;
+}
+
+.segmented {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 14px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--c-surface-2);
+}
+
+.segment {
+  flex: 1;
+  padding: 7px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.segmentActive {
+  background: var(--c-accent);
+  color: var(--c-on-dark);
+}
+
+.adjustRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.adjustRow > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.after {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--c-accent-light);
+  font-size: 12px;
+  color: var(--c-accent);
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.quickButton {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 4px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--c-surface-2);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-text);
+  cursor: pointer;
+}
+
+.quickButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.addPackage {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.priceBox {
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--c-surface-2);
+}
+
+.priceLabel {
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--c-muted);
+}
+
+.priceValue {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--c-text);
+}
+
+.priceSub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.note {
+  margin: 14px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--c-muted);
+}
+
+.editLink {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+@media (max-width: 1000px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stats > :first-child {
+    grid-column: 1 / -1;
+  }
+}

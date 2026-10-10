@@ -1,0 +1,62 @@
+.alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--c-orange-light);
+  animation: fadeIn 0.2s;
+}
+
+.high {
+  background: var(--c-red-light);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-orange);
+}
+
+.high .title {
+  color: var(--c-red);
+}
+
+.text {
+  margin-top: -6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--c-text);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Secondary call to action, styled as a link-button. */
+.link {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--c-accent);
+}
+
+@media (max-width: 560px) {
+  .alert {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

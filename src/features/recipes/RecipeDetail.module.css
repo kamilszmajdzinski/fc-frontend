@@ -1,0 +1,247 @@
+.description {
+  margin-top: 10px;
+  max-width: 640px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--c-text);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.gain {
+  color: var(--c-green);
+}
+
+.lossValue {
+  color: var(--c-red);
+}
+
+/* Spacing for the "Cena sprzedaży jest za niska" alert under the cards. */
+.priceAlert {
+  margin: -8px 0 24px;
+}
+
+.section {
+  margin-bottom: 16px;
+  padding: 20px;
+}
+
+.muted {
+  font-size: 14px;
+  color: var(--c-muted);
+}
+
+.table {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px 16px;
+  align-items: center;
+}
+
+.th {
+  font-size: 11px;
+  color: var(--c-muted);
+}
+
+.right {
+  text-align: right;
+}
+
+.name {
+  overflow: hidden;
+  font-size: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--c-text);
+}
+
+.amount {
+  color: var(--c-muted);
+}
+
+.productLink {
+  color: var(--c-text);
+}
+
+.productLink:hover {
+  color: var(--c-accent);
+}
+
+.cost {
+  font-size: 14px;
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--c-text);
+}
+
+.share {
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--c-muted);
+}
+
+.name,
+.cost,
+.share {
+  transition: opacity 0.15s;
+}
+
+.faded {
+  opacity: 0.4;
+}
+
+/* Legend swatch: the row's colour in the bar. */
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+
+/* ---------- Share bar ---------- */
+
+.barWrap {
+  position: relative;
+  margin-top: 18px;
+}
+
+.bar {
+  display: flex;
+  gap: 2px; /* the card's surface shows through between segments */
+  height: 12px;
+}
+
+.segment {
+  position: relative;
+  min-width: 3px;
+  flex-basis: 0;
+  cursor: default;
+  transition: opacity 0.15s;
+}
+
+.segment:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.segment:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.segment:only-child {
+  border-radius: 4px;
+}
+
+/* Hit area taller than the 12px bar. */
+.segment::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
+.segment:focus-visible {
+  outline: 2px solid var(--c-text);
+  outline-offset: 2px;
+}
+
+.dimmed {
+  opacity: 0.35;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  z-index: 5;
+  padding: 8px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-white);
+  box-shadow: 0 4px 16px rgba(74, 59, 50, 0.08);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: fadeIn 0.12s;
+}
+
+.tooltipValue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.tooltipKey {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.tooltipLabel {
+  margin-top: 2px;
+  padding-left: 20px;
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--c-text);
+  white-space: pre-line;
+}
+
+.stepNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--c-accent-light);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-accent);
+}
+
+.cta {
+  margin-top: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stats > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,97 @@
+.timeline {
+  list-style: none;
+}
+
+.entry {
+  position: relative;
+  padding: 0 0 18px 24px;
+}
+
+/* The line joining the dots. */
+.entry::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 14px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--c-border);
+}
+
+.entry:last-child {
+  padding-bottom: 0;
+}
+
+.entry:last-child::before {
+  display: none;
+}
+
+.dot {
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c-accent);
+}
+
+.dotMuted {
+  background: var(--c-label);
+}
+
+.dotDanger {
+  background: var(--c-red);
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 6px;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.date {
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--c-text);
+}
+
+.more {
+  margin-top: 16px;
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.up {
+  background: var(--c-red-light);
+  color: var(--c-red);
+}
+
+.down {
+  background: var(--c-green-light);
+  color: var(--c-green);
+}

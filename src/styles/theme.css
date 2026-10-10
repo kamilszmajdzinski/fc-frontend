@@ -1,0 +1,65 @@
+/*
+ * Design tokens from designs/FoodCost Web Minimal.html ("Minimal" theme).
+ * Every colour and font in the app comes from here, so a new theme only has to override these.
+ */
+:root {
+  --c-bg: #ffffff;
+  --c-surface: #fbfaf8;
+  --c-surface-2: #f5f2ee;
+  --c-header: #ffffff;
+  --c-text: #4a3b32;
+  --c-muted: #857467;
+  --c-label: #9a8b80;
+  --c-border: #f1ede8;
+  --c-white: #ffffff;
+  --c-on-dark: #ffffff;
+  --c-overlay: rgba(0, 0, 0, 0.45);
+
+  --c-accent: #d68a72;
+  --c-accent-light: #fcf4f1;
+  --c-green: #6f9a78;
+  --c-green-light: #f3f7f2;
+  --c-orange: #c4954f;
+  --c-orange-light: #fcf7ee;
+  --c-red: #c96a5e;
+  --c-red-light: #fcf2f0;
+
+  /*
+   * Pastel chart colours for series that need to be told apart (e.g. each ingredient's share of a
+   * recipe's cost). Kept apart from the status colours above, which mean good/bad.
+   * All eight sit at OKLCH L 0.765 / C 0.102: as light and soft as the dataviz checks allow. Lighter
+   * or greyer and neighbours stop being distinguishable. Use the slots in this order: the order is
+   * what keeps neighbours distinct under colour blindness. Checked against --c-surface with the
+   * dataviz validator: worst neighbouring pair ΔE 8.3 colour-blind (target ≥ 8), 15.6 normal vision
+   * (floor 15).
+   * Every slot is ~2:1 against the card, below the 3:1 for marks, so a chart using them must also
+   * show its values as text (e.g. the table under the cost bar). More than 8 series: colour 7,
+   * fold the rest into "other".
+   */
+  --c-series-1: #e79f77; /* peach */
+  --c-series-2: #63c8af; /* mint */
+  --c-series-3: #9faef4; /* periwinkle */
+  --c-series-4: #90c385; /* sage */
+  --c-series-5: #cb9fe0; /* lavender */
+  --c-series-6: #c7b264; /* butter */
+  --c-series-7: #6dbdea; /* sky */
+  --c-series-8: #eb97a4; /* rose */
+  --c-series-other: #9a8b80; /* folded tail; ΔE 17.2 / 15.4 from sky, its only neighbour */
+
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Montserrat', system-ui, sans-serif;
+
+  --radius: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+
+  --header-height: 60px;
+  --list-width: clamp(300px, 30vw, 380px);
+  --page-padding: 36px 48px;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --page-padding: 24px 16px 40px;
+  }
+}

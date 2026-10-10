@@ -1,0 +1,288 @@
+.layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---------- List (left panel) ---------- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: var(--list-width);
+  border-right: 1px solid var(--c-border);
+  background: var(--c-bg);
+}
+
+.listHeader {
+  flex-shrink: 0;
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.listTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 30px;
+}
+
+.listTitle {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--c-text);
+}
+
+.listAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--c-accent);
+  color: var(--c-on-dark);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.listAction:hover {
+  text-decoration: none;
+  filter: brightness(0.97);
+}
+
+.search {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  font-size: 13px;
+  color: var(--c-text);
+  outline: none;
+}
+
+.search:focus {
+  border-color: var(--c-text);
+}
+
+.listBody {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.item {
+  display: block;
+  margin-bottom: 2px;
+  padding: 11px 12px;
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  transition: background 0.15s;
+}
+
+.item:hover {
+  text-decoration: none;
+  background: var(--c-surface);
+}
+
+.itemActive,
+.itemActive:hover {
+  background: var(--c-accent-light);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.rowTitleLine {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.rowTitle {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--c-text);
+}
+
+.rowTitleSerif {
+  font-family: var(--font-serif);
+  font-weight: 600;
+}
+
+.rowSub {
+  margin-top: 1px;
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--c-muted);
+}
+
+.rowAside {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.rowAsideMain {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--c-text);
+}
+
+.rowAsideHighlight {
+  color: var(--c-accent);
+}
+
+.rowAsideSub {
+  margin-top: 1px;
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--c-muted);
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dotGreen {
+  background: var(--c-green);
+}
+
+.dotRed {
+  background: var(--c-red);
+}
+
+/* ---------- Detail (right panel) ---------- */
+
+.detail {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--c-bg);
+}
+
+.page {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--page-padding);
+  animation: fadeSlide 0.2s;
+}
+
+.pageInner {
+  max-width: 980px;
+}
+
+.pageWide {
+  max-width: 1280px;
+}
+
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.pageHeaderMain {
+  min-width: 0;
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-label);
+}
+
+.pageTitle {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--c-text);
+  overflow-wrap: anywhere;
+}
+
+.pageTitleLarge {
+  font-size: 32px;
+}
+
+.pageSub {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--c-muted);
+}
+
+.pageActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.back {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-muted);
+}
+
+@media (max-width: 760px) {
+  .list {
+    width: 100%;
+    border-right: none;
+  }
+
+  .layout[data-detail-open='true'] .list,
+  .layout[data-detail-open='false'] .detail {
+    display: none;
+  }
+
+  .back {
+    display: inline-flex;
+  }
+
+  .pageHeader {
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .pageTitle,
+  .pageTitleLarge {
+    font-size: 26px;
+  }
+}

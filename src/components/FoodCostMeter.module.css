@@ -1,0 +1,87 @@
+.meter {
+  --tone: var(--c-green);
+  width: 100%;
+  max-width: 340px;
+}
+
+.good {
+  --tone: var(--c-green);
+}
+
+.acceptable {
+  --tone: var(--c-orange);
+}
+
+.high {
+  --tone: var(--c-red);
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.value {
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.level {
+  font-weight: 600;
+  color: var(--tone);
+}
+
+/* The unfilled track is a light tint of the fill's colour. */
+.track {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tone) 16%, transparent);
+}
+
+.fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--tone);
+  transition: width 0.4s ease;
+}
+
+/* Hairline markers for the 30% target and the 40% limit. */
+.mark {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--c-text);
+  opacity: 0.45;
+}
+
+.scale {
+  position: relative;
+  height: 14px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--c-muted);
+}
+
+.scale span {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+/* "cel 30%" sits left of its mark and "40%" right of its own, so they never overlap. */
+.scale span:first-child {
+  transform: translateX(calc(-100% - 4px));
+}
+
+.scale span:last-child {
+  transform: translateX(4px);
+}

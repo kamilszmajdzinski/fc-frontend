@@ -1,0 +1,62 @@
+.stack {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(520px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px 14px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--c-text);
+  color: var(--c-on-dark);
+  font-size: 13px;
+  line-height: 1.6;
+  animation: pop 0.2s ease-out;
+  pointer-events: auto;
+}
+
+.error {
+  background: var(--c-red-light);
+  color: var(--c-red);
+  border: 1px solid var(--c-red);
+}
+
+.message {
+  flex: 1;
+}
+
+.action {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 4px 10px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.close {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1.2;
+  opacity: 0.7;
+  cursor: pointer;
+}

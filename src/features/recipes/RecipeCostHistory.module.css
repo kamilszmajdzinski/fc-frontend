@@ -1,0 +1,9 @@
+.muted {
+  font-size: 13px;
+  color: var(--c-muted);
+}
+
+.cause {
+  font-size: 13px;
+  color: var(--c-text);
+}

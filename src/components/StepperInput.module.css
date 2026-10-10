@@ -1,0 +1,32 @@
+.stepper {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  gap: 4px;
+}
+
+.compact {
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
+}
+
+.input {
+  text-align: center;
+}
+
+.button {
+  border: none;
+  border-radius: var(--radius);
+  background: var(--c-surface-2);
+  font-size: 18px;
+  line-height: 1;
+  color: var(--c-text);
+  cursor: pointer;
+}
+
+.compact .button {
+  font-size: 16px;
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

@@ -1,0 +1,11 @@
+.badgeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.price {
+  font-size: 11px;
+  color: var(--c-muted);
+}
