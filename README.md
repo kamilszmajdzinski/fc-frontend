@@ -37,6 +37,10 @@ Configuration lives in `.env` (see [.env.example](.env.example)):
 |---|---|---|
 | `VITE_API_URL` | The browser. Set it for production builds, e.g. `https://api.example.com/api/v1`. | `/api/v1` |
 | `API_PROXY_TARGET` | The dev/preview server's `/api` proxy. | `http://localhost:3000` |
+| `VITE_SUPABASE_URL` | Login. The Supabase project URL. | none (required) |
+| `VITE_SUPABASE_ANON_KEY` | Login. The project's anon (public) key. | none (required) |
+
+**Login.** Users log in with Google through Supabase Auth (`/login`). Every other page needs a session, and every API request sends its access token (`Authorization: Bearer ...`). A `401` from the API logs the user out. Logging out, or switching to another account, clears all cached data. For local login, add `http://localhost:5173/**` to the redirect URLs in Supabase (Authentication → URL Configuration).
 
 ## What is implemented
 

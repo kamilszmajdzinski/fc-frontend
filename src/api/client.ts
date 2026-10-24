@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 import type { ApiError, ErrorCode, RecipeRef, ValidationIssue } from './types';
 
 const BASE_URL = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/+$/, '');
@@ -29,11 +30,17 @@ export class ApiRequestError extends Error {
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
+  // getSession refreshes the access token first if it has expired.
+  const { data: auth } = await supabase().auth.getSession();
+  const headers: Record<string, string> = {};
+  if (auth.session) headers.Authorization = `Bearer ${auth.session.access_token}`;
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+
   let response: Response;
   try {
     response = await fetch(BASE_URL + path, {
       method,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -44,6 +51,8 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
 
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
+    // The session is gone or no longer accepted: log out here too, which sends the user to /login.
+    if (response.status === 401) await supabase().auth.signOut({ scope: 'local' });
     const error = (data as ApiError | null)?.error;
     throw new ApiRequestError(
       response.status,
@@ -64,6 +73,8 @@ export function errorMessage(error: unknown): string {
   switch (error.code) {
     case 'NETWORK_ERROR':
       return 'Nie można połączyć się z serwerem. Sprawdź, czy backend działa.';
+    case 'UNAUTHORIZED':
+      return 'Sesja wygasła. Zaloguj się ponownie.';
     case 'NOT_FOUND':
       return 'Nie znaleziono — mogło zostać usunięte.';
     case 'VALIDATION_ERROR':
