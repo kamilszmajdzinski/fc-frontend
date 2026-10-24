@@ -2,6 +2,8 @@ import { Link, Navigate, Outlet, createBrowserRouter, useRouteError } from 'reac
 import { AppHeader } from './components/AppHeader';
 import { EmptyState } from './components/EmptyState';
 import { CalculatorPage } from './features/calculator/CalculatorPage';
+import { LoginPage } from './features/auth/LoginPage';
+import { RequireAuth } from './features/auth/RequireAuth';
 import { ActivityPage, EntityHistoryPage } from './features/history/ActivityPage';
 import { InventoryDetailPage, InventoryIndex, InventoryPage } from './features/inventory/InventoryPage';
 import {
@@ -57,8 +59,13 @@ function RouteError() {
 }
 
 export const router = createBrowserRouter([
+  { path: 'login', element: <LoginPage />, errorElement: <RouteError /> },
   {
-    element: <AppLayout />,
+    element: (
+      <RequireAuth>
+        <AppLayout />
+      </RequireAuth>
+    ),
     errorElement: <RouteError />,
     children: [
       { index: true, element: <Navigate to="/recipes" replace /> },

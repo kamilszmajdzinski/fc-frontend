@@ -248,6 +248,7 @@ export interface ChangeFeed {
 export type ErrorCode =
   | 'VALIDATION_ERROR'
   | 'BAD_REQUEST'
+  | 'UNAUTHORIZED'
   | 'NOT_FOUND'
   | 'PRODUCT_IN_USE'
   | 'UNIT_CONFLICT'

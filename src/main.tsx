@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router/dom';
 import { ApiRequestError } from './api/client';
 import { router } from './router';
 import { ToastProvider } from './components/Toast';
+import { AuthProvider } from './features/auth/AuthProvider';
 import './styles/theme.css';
 import './styles/global.css';
 
@@ -22,9 +23,11 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <RouterProvider router={router} />
-      </ToastProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,
 );
