@@ -1,7 +1,7 @@
 // Turns change log entries (GET /…/changes) into Polish, human-readable text.
-import type { ChangeEntry, ChangeLogEntry, FieldChange, IngredientSnapshot, Unit } from '../api/types';
+import type { ChangeEntry, ChangeLogEntry, FieldChange, IngredientSnapshot, Unit, YieldUnit } from '../api/types';
 import { formatDay, formatMoney, formatQuantity, plural, portionsLabel } from './format';
-import { pricingUnitFor, unitLabel } from './units';
+import { formatAmount as formatUnitAmount, pricingUnitFor, unitLabel } from './units';
 
 const FIELD_LABELS: Record<FieldChange['field'], string> = {
   name: 'Nazwa',
@@ -14,6 +14,8 @@ const FIELD_LABELS: Record<FieldChange['field'], string> = {
   inventoryQuantity: 'Stan magazynowy',
   portions: 'Porcje',
   sellPrice: 'Cena sprzedaży',
+  yieldQuantity: 'Wydajność',
+  yieldUnit: 'Jednostka wydajności',
   ingredients: 'Składniki',
   steps: 'Sposób przygotowania',
   foodCost: 'Koszt składników',
@@ -51,7 +53,10 @@ export function formatFieldValue(field: FieldChange['field'], value: unknown, un
     case 'pricePerUnit':
       return `${formatMoney(Number(value))}${unit ? `/${unitLabel(pricingUnitFor(unit))}` : ''}`;
     case 'portions':
-      return String(value);
+    case 'yieldQuantity':
+      return formatQuantity(Number(value));
+    case 'yieldUnit':
+      return unitLabel(value as YieldUnit);
     case 'steps': {
       const count = (value as string[]).length;
       return `${count} ${plural(count, 'krok', 'kroki', 'kroków')}`;
@@ -134,27 +139,36 @@ export interface IngredientDiff {
   changed: { from: IngredientSnapshot; to: IngredientSnapshot }[];
 }
 
+/** "p:12" for a product line, "r:5" for a sub-recipe line. */
+export function snapshotKey(line: IngredientSnapshot): string {
+  return 'recipeId' in line ? `r:${line.recipeId}` : `p:${line.productId}`;
+}
+
+export function snapshotName(line: IngredientSnapshot): string {
+  return 'recipeId' in line ? line.recipeName : line.productName;
+}
+
 /**
- * Added, removed and changed lines, matched by product (from the API docs). If a product appears
- * twice in one recipe, only one of its lines is compared; a change of order alone shows nothing.
+ * Added, removed and changed lines, matched by product or sub-recipe. If one appears twice in a
+ * recipe, only one of its lines is compared; a change of order alone shows nothing.
  */
 export function diffIngredients(from: IngredientSnapshot[] | null, to: IngredientSnapshot[] | null): IngredientDiff {
-  const before = new Map((from ?? []).map((line) => [line.productId, line]));
-  const after = new Map((to ?? []).map((line) => [line.productId, line]));
+  const before = new Map((from ?? []).map((line) => [snapshotKey(line), line]));
+  const after = new Map((to ?? []).map((line) => [snapshotKey(line), line]));
   return {
-    added: [...after.values()].filter((line) => !before.has(line.productId)),
-    removed: [...before.values()].filter((line) => !after.has(line.productId)),
-    changed: [...after.values()]
-      .filter((line) => {
-        const old = before.get(line.productId);
+    added: [...after.entries()].filter(([key]) => !before.has(key)).map(([, line]) => line),
+    removed: [...before.entries()].filter(([key]) => !after.has(key)).map(([, line]) => line),
+    changed: [...after.entries()]
+      .filter(([key, line]) => {
+        const old = before.get(key);
         return old !== undefined && (old.quantity !== line.quantity || old.unit !== line.unit);
       })
-      .map((line) => ({ from: before.get(line.productId)!, to: line })),
+      .map(([key, line]) => ({ from: before.get(key)!, to: line })),
   };
 }
 
 export function formatAmount(line: Pick<IngredientSnapshot, 'quantity' | 'unit'>): string {
-  return `${formatQuantity(line.quantity)} ${unitLabel(line.unit)}`;
+  return formatUnitAmount(line.quantity, line.unit);
 }
 
 /** "4 → 5 kroków", or "zmieniona treść" when only the wording changed. */

@@ -95,9 +95,11 @@ export function RecipeDetailPage() {
   const data = recipe.data;
   return (
     <RecipeDetail
+      // Its dialogs belong to this recipe: following a link to another one starts fresh.
+      key={data.id}
       recipe={data}
       deleting={remove.isPending}
-      onDelete={() =>
+      onDelete={(onInUse) =>
         remove.mutate(data.id, {
           onSuccess: () => {
             // Deletion is soft: "Cofnij" restores the recipe and opens it again.
@@ -107,7 +109,10 @@ export function RecipeDetailPage() {
             });
             navigate('/recipes');
           },
-          onError: (error) => toast(errorMessage(error), 'error'),
+          onError: (error) => {
+            if (error instanceof ApiRequestError && error.code === 'RECIPE_IN_USE') onInUse(error.recipes);
+            else toast(errorMessage(error), 'error');
+          },
         })
       }
     />
@@ -118,21 +123,25 @@ export function RecipeCreatePage() {
   const navigate = useNavigate();
   const toast = useToast();
   const products = useProducts();
+  const recipes = useRecipes();
   const create = useCreateRecipe();
 
   return (
     <DetailPage>
       <BackLink to="/recipes">Przepisy</BackLink>
       <PageHeader eyebrow="Nowy przepis" title="Dodaj przepis" />
-      {products.isPending ? (
+      {products.isPending || recipes.isPending ? (
         <Loading />
       ) : products.isError ? (
         <LoadError error={products.error} onRetry={() => products.refetch()} />
+      ) : recipes.isError ? (
+        <LoadError error={recipes.error} onRetry={() => recipes.refetch()} />
       ) : (
         <RecipeForm
           products={products.data}
+          recipes={recipes.data}
           busy={create.isPending}
-          serverError={create.error ? errorMessage(create.error) : undefined}
+          error={create.error}
           onCancel={() => navigate('/recipes')}
           onSubmit={(input) =>
             create.mutate(input, {
@@ -152,14 +161,16 @@ export function RecipeEditPage() {
   const id = useIdParam('recipeId');
   const recipe = useRecipe(id);
   const products = useProducts();
+  const recipes = useRecipes();
   const navigate = useNavigate();
   const toast = useToast();
   const replace = useReplaceRecipe();
 
   if (id === undefined || isNotFound(recipe.error)) return <RecipeNotFound />;
-  if (recipe.isPending || products.isPending) return <Loading />;
+  if (recipe.isPending || products.isPending || recipes.isPending) return <Loading />;
   if (recipe.isError) return <LoadError error={recipe.error} onRetry={() => recipe.refetch()} />;
   if (products.isError) return <LoadError error={products.error} onRetry={() => products.refetch()} />;
+  if (recipes.isError) return <LoadError error={recipes.error} onRetry={() => recipes.refetch()} />;
 
   return (
     <DetailPage>
@@ -170,8 +181,9 @@ export function RecipeEditPage() {
         key={id}
         recipe={recipe.data}
         products={products.data}
+        recipes={recipes.data}
         busy={replace.isPending}
-        serverError={replace.error ? errorMessage(replace.error) : undefined}
+        error={replace.error}
         onCancel={() => navigate(`/recipes/${id}`)}
         onSubmit={(input) =>
           replace.mutate(

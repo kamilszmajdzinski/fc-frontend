@@ -4,17 +4,18 @@ import { ApiRequestError, errorMessage } from '../../api/client';
 import { restoreRecipe } from '../../api/recipes';
 import type { DroppedIngredient } from '../../api/types';
 import { useToast } from '../../components/Toast';
-import { formatQuantity } from '../../lib/format';
-import { unitLabel } from '../../lib/units';
+import { formatAmount } from '../../lib/units';
 
 const DROP_REASONS: Record<DroppedIngredient['reason'], string> = {
   product_deleted: 'składnik usunięty',
+  recipe_deleted: 'przepis usunięty',
   unit_incompatible: 'zmieniona jednostka',
 };
 
-/** "250 g Masło 82% (składnik usunięty)" */
+/** "250 g Masło 82% (składnik usunięty)", "2 porcje Krem chantilly (przepis usunięty)" */
 export function describeDropped(line: DroppedIngredient): string {
-  return `${formatQuantity(line.quantity)} ${unitLabel(line.unit)} ${line.productName} (${DROP_REASONS[line.reason]})`;
+  const name = 'recipeId' in line ? line.recipeName : line.productName;
+  return `${formatAmount(line.quantity, line.unit)} ${name} (${DROP_REASONS[line.reason]})`;
 }
 
 /**

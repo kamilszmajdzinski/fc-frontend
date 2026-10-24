@@ -111,6 +111,21 @@
   color: var(--c-muted);
 }
 
+/* "Składniki" / "Przepisy" above each group of options. */
+.group {
+  padding: 8px 10px 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-label);
+}
+
+.group:not(:first-child) {
+  margin-top: 4px;
+  border-top: 1px solid var(--c-border);
+}
+
 .empty {
   padding: 7px 10px;
   font-size: 13px;

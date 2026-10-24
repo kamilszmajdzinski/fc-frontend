@@ -1,11 +1,12 @@
 import { Fragment, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { errorMessage } from '../../api/client';
-import { usePatchRecipe } from '../../api/recipes';
-import type { Recipe } from '../../api/types';
+import { usePatchRecipe, useRecipeUsedIn } from '../../api/recipes';
+import type { Recipe, RecipeIngredient, RecipeRef } from '../../api/types';
 import { Icon } from '../../components/Icon';
 import { BackLink, DetailPage, PageHeader } from '../../components/MasterDetail';
-import { ConfirmModal } from '../../components/Modal';
+import { ConfirmModal, NoticeModal } from '../../components/Modal';
+import { RecipeLinks } from '../../components/RecipeLinks';
 import { useToast } from '../../components/Toast';
 import { Button, Card, cx, Stat, type StatTone } from '../../components/ui';
 import { costShares, seriesColor } from '../../lib/costShare';
@@ -17,7 +18,7 @@ import {
   type FoodCostLevel,
 } from '../../lib/foodcost';
 import { formatDateTime, formatMoney, formatPercent, formatQuantity, plural, portionsLabel } from '../../lib/format';
-import { unitLabel } from '../../lib/units';
+import { formatAmount, unitLabel } from '../../lib/units';
 import { HistoryCard } from '../history/HistoryCard';
 import { RecipeCostTimeline } from './RecipeCostHistory';
 import { PriceAlert } from './PriceAlert';
@@ -29,14 +30,18 @@ const LEVEL_TONES: Record<FoodCostLevel, StatTone> = { good: 'green', acceptable
 interface RecipeDetailProps {
   recipe: Recipe;
   deleting: boolean;
-  onDelete: () => void;
+  /** Deletes the recipe. `onInUse` is called when other recipes still use it (409 RECIPE_IN_USE). */
+  onDelete: (onInUse: (recipes: RecipeRef[]) => void) => void;
 }
 
 export function RecipeDetail({ recipe, deleting, onDelete }: RecipeDetailProps) {
   const navigate = useNavigate();
   const toast = useToast();
   const patch = usePatchRecipe();
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const usedIn = useRecipeUsedIn(recipe.id);
+  // A recipe used in others can't be deleted: say so up front instead of asking to confirm.
+  const [dialog, setDialog] = useState<'confirm' | { inUse: RecipeRef[] } | null>(null);
+  const usedInRecipes = usedIn.data ?? [];
   const count = recipe.ingredients.length;
   const suggested = suggestedPrice(recipe.foodCost);
   const result = profitability(recipe.foodCost, recipe.sellPrice);
@@ -61,6 +66,9 @@ export function RecipeDetail({ recipe, deleting, onDelete }: RecipeDetailProps) 
         title={recipe.name}
         sub={[
           portionsLabel(recipe.portions),
+          recipe.yieldQuantity !== null && recipe.yieldUnit
+            ? `wydajność ${formatQuantity(recipe.yieldQuantity)} ${unitLabel(recipe.yieldUnit)}`
+            : null,
           recipe.sellPrice !== null ? `cena sprzedaży ${formatMoney(recipe.sellPrice)}` : null,
           `zaktualizowano ${formatDateTime(recipe.updatedAt)}`,
         ]
@@ -72,7 +80,13 @@ export function RecipeDetail({ recipe, deleting, onDelete }: RecipeDetailProps) 
               <Icon name="edit" size={14} />
               Edytuj
             </Button>
-            <Button variant="danger" small onClick={() => setConfirmOpen(true)} aria-label="Usuń przepis" title="Usuń przepis">
+            <Button
+              variant="danger"
+              small
+              onClick={() => setDialog(usedInRecipes.length > 0 ? { inUse: usedInRecipes } : 'confirm')}
+              aria-label="Usuń przepis"
+              title="Usuń przepis"
+            >
               <Icon name="trash" size={14} />
             </Button>
           </>
@@ -149,6 +163,21 @@ export function RecipeDetail({ recipe, deleting, onDelete }: RecipeDetailProps) 
         )}
       </Card>
 
+      {usedInRecipes.length > 0 && (
+        <Card title="Używany w przepisach" className={styles.section}>
+          <ul className={styles.usedIn}>
+            {usedInRecipes.map((parent) => (
+              <li key={parent.id}>
+                <Link to={`/recipes/${parent.id}`} className={styles.productLink}>
+                  {parent.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className={styles.muted}>Zmiana kosztu tego przepisu zmienia też ich koszt.</div>
+        </Card>
+      )}
+
       {recipe.steps.length > 0 && (
         <Card title="Sposób przygotowania" className={styles.section}>
           <ol className={styles.steps}>
@@ -176,16 +205,33 @@ export function RecipeDetail({ recipe, deleting, onDelete }: RecipeDetailProps) 
         Otwórz w kalkulatorze →
       </Button>
 
-      {confirmOpen && (
+      {dialog === 'confirm' && (
         <ConfirmModal
           message={`Czy na pewno chcesz usunąć przepis „${recipe.name}”?`}
           busy={deleting}
-          onConfirm={onDelete}
-          onCancel={() => setConfirmOpen(false)}
+          onConfirm={() => onDelete((inUse) => setDialog({ inUse }))}
+          onCancel={() => setDialog(null)}
+        />
+      )}
+      {dialog && dialog !== 'confirm' && (
+        <NoticeModal
+          title="Nie można usunąć"
+          message={
+            <>
+              „{recipe.name}” jest składnikiem {dialog.inUse.length}{' '}
+              {plural(dialog.inUse.length, 'przepisu', 'przepisów', 'przepisów')}: <RecipeLinks recipes={dialog.inUse} />.
+              Najpierw usuń go z tych przepisów.
+            </>
+          }
+          onClose={() => setDialog(null)}
         />
       )}
     </DetailPage>
   );
+}
+
+function lineUrl(line: RecipeIngredient): string {
+  return line.type === 'recipe' ? `/recipes/${line.recipeId}` : `/products/${line.productId}`;
 }
 
 /**
@@ -195,7 +241,7 @@ export function RecipeDetail({ recipe, deleting, onDelete }: RecipeDetailProps) 
 function CostBreakdown({ recipe }: { recipe: Recipe }) {
   const total = recipe.foodCost;
   const { lineSlots, segments } = costShares(
-    recipe.ingredients.map((line) => ({ name: line.productName, cost: line.cost })),
+    recipe.ingredients.map((line) => ({ name: line.name, cost: line.cost })),
     total,
   );
   // Segment key of the highlighted row/segment, and whether the bar is the one being pointed at.
@@ -230,12 +276,11 @@ function CostBreakdown({ recipe }: { recipe: Recipe }) {
             <Fragment key={index}>
               <div className={cx(styles.name, faded && styles.faded)} {...rowProps}>
                 <span className={styles.swatch} style={{ background: seriesColor(lineSlots[index]) }} aria-hidden="true" />
-                <span className={styles.amount}>
-                  {formatQuantity(line.quantity)} {unitLabel(line.unit)}
-                </span>{' '}
-                <Link to={`/products/${line.productId}`} className={styles.productLink}>
-                  {line.productName}
+                <span className={styles.amount}>{formatAmount(line.quantity, line.unit)}</span>{' '}
+                <Link to={lineUrl(line)} className={styles.productLink}>
+                  {line.name}
                 </Link>
+                {line.type === 'recipe' && <span className={styles.recipeTag}>przepis</span>}
               </div>
               <div className={cx(styles.cost, faded && styles.faded)} {...rowProps}>
                 {formatMoney(line.cost)}

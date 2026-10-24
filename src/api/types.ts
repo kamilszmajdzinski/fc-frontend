@@ -1,6 +1,8 @@
 // Types copied from the backend's docs/API.md. Keep them in sync with the API.
 
-export type Unit = 'mg' | 'g' | 'kg' | 'ml' | 'l' | 'piece';
+export type Unit = 'mg' | 'g' | 'kg' | 'ml' | 'l' | 'piece'; // product units
+export type IngredientUnit = Unit | 'portion'; // 'portion' only for sub-recipes
+export type YieldUnit = 'mg' | 'g' | 'kg' | 'ml' | 'l'; // a recipe's yield
 export type PricingUnit = 'kg' | 'l' | 'piece';
 
 export interface ListResponse<T> {
@@ -65,17 +67,24 @@ export interface RecipeSummary {
   foodCost: number;
   costPerPortion: number;
   sellPrice: number | null; // selling price of the whole recipe, if set
+  yieldQuantity: number | null;
+  yieldUnit: YieldUnit | null;
   ingredientCount: number;
   updatedAt: string;
 }
 
+// A line is a product or another recipe (a sub-recipe).
 export interface RecipeIngredient {
   id: number; // changes on every save - don't use as a stable key
-  productId: number;
-  productName: string;
+  type: 'product' | 'recipe';
+  productId: number | null; // set when type is 'product'
+  productName: string | null;
+  recipeId: number | null; // set when type is 'recipe'
+  recipeName: string | null;
+  name: string; // productName or recipeName
   quantity: number;
-  unit: Unit;
-  unitPrice: number;
+  unit: IngredientUnit;
+  unitPrice: number; // price of 1 `unit`, e.g. per g, or per portion of a sub-recipe
   cost: number;
 }
 
@@ -87,6 +96,8 @@ export interface Recipe {
   foodCost: number; // sum of ingredient costs
   costPerPortion: number;
   sellPrice: number | null; // selling price of the whole recipe (same scope as foodCost), if set
+  yieldQuantity: number | null; // what the whole recipe makes, e.g. 550 ...
+  yieldUnit: YieldUnit | null; // ... g. Needed to use it in other recipes by weight or volume.
   ingredients: RecipeIngredient[];
   steps: string[];
   createdAt: string;
@@ -95,13 +106,16 @@ export interface Recipe {
 
 export type IngredientInput =
   | { productId: number; quantity: number; unit: Unit }
-  | { product: ProductInput; quantity: number; unit: Unit };
+  | { product: ProductInput; quantity: number; unit: Unit }
+  | { recipeId: number; quantity: number; unit: IngredientUnit };
 
 export interface RecipeInput {
   name: string;
   description?: string | null;
   portions: number;
   sellPrice?: number | null; // default null
+  yieldQuantity?: number | null; // default null; set together with yieldUnit
+  yieldUnit?: YieldUnit | null;
   ingredients?: IngredientInput[];
   steps?: string[];
 }
@@ -110,13 +124,10 @@ export interface RecipeInput {
 export type RecipePatch = Partial<RecipeInput>;
 
 // POST /recipes/:id/restore - recipes are soft-deleted and can be brought back with the same id.
-export interface DroppedIngredient {
-  productId: number;
-  productName: string; // name when the recipe was deleted (or now, for unit_incompatible)
-  quantity: number;
-  unit: Unit;
-  reason: 'product_deleted' | 'unit_incompatible';
-}
+// A product or sub-recipe line. The name is the one from when the recipe was deleted (or now, for unit_incompatible).
+export type DroppedIngredient = IngredientSnapshot & {
+  reason: 'product_deleted' | 'recipe_deleted' | 'unit_incompatible';
+};
 
 export interface RestoreRecipeResult {
   recipe: Recipe;
@@ -159,8 +170,9 @@ export interface CostSnapshot {
 export interface RecipeCostChange extends CostSnapshot {
   id: number;
   changedAt: string;
-  reason: 'created' | 'recipe_updated' | 'recipe_restored' | 'product_price_changed';
+  reason: 'created' | 'recipe_updated' | 'recipe_restored' | 'product_price_changed' | 'sub_recipe_changed';
   previous: CostSnapshot | null; // null for the first entry
+  subRecipe: { id: number; name: string } | null; // the sub-recipe that passed the change on, if any
   cause: {
     priceChangeId: number; // the matching entry in the product's price history
     productId: number | null; // null if the product has been deleted since
@@ -185,15 +197,21 @@ export type ProductField =
   | 'pricePerPackage'
   | 'pricePerUnit'
   | 'inventoryQuantity';
-export type RecipeField = 'name' | 'description' | 'portions' | 'sellPrice' | 'ingredients' | 'steps' | 'foodCost';
+export type RecipeField =
+  | 'name'
+  | 'description'
+  | 'portions'
+  | 'sellPrice'
+  | 'yieldQuantity'
+  | 'yieldUnit'
+  | 'ingredients'
+  | 'steps'
+  | 'foodCost';
 
 // One line of a recipe's ingredient list as it was at the time of the change.
-export interface IngredientSnapshot {
-  productId: number;
-  productName: string;
-  quantity: number;
-  unit: Unit;
-}
+export type IngredientSnapshot =
+  | { productId: number; productName: string; quantity: number; unit: Unit }
+  | { recipeId: number; recipeName: string; quantity: number; unit: IngredientUnit };
 
 export interface FieldChange {
   field: ProductField | RecipeField;
@@ -234,6 +252,7 @@ export type ErrorCode =
   | 'PRODUCT_IN_USE'
   | 'UNIT_CONFLICT'
   | 'RECIPE_NOT_DELETED'
+  | 'RECIPE_IN_USE'
   | 'INTERNAL_ERROR';
 
 export interface ValidationIssue {

@@ -72,6 +72,29 @@
   color: var(--c-accent);
 }
 
+/* After a sub-recipe's name in the cost table. */
+.recipeTag {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--c-accent-light);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-accent);
+  vertical-align: 1px;
+}
+
+.usedIn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-bottom: 8px;
+  list-style: none;
+  font-size: 14px;
+}
+
 .cost {
   font-size: 14px;
   font-weight: 500;

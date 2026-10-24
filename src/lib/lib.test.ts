@@ -14,10 +14,51 @@ import {
   toInputValue,
 } from './format';
 import { matchesSearch, sortByName } from './search';
-import { compatibleUnits, convert, defaultRecipeUnit, ingredientCost, inventoryValue, pricingUnitFor } from './units';
+import {
+  areCompatible,
+  compatibleUnits,
+  convert,
+  defaultRecipeUnit,
+  formatAmount,
+  ingredientCost,
+  inventoryValue,
+  pricingUnitFor,
+  subRecipeCost,
+  subRecipeUnits,
+} from './units';
 
 // Intl output uses non-breaking spaces; compare with plain ones.
 const plain = (text: string) => text.replace(/\s/g, ' ');
+
+describe('sub-recipe units', () => {
+  const cream = { foodCost: 18.4, portions: 8, yieldQuantity: 550, yieldUnit: 'g' as const };
+  const base = { ...cream, yieldQuantity: null, yieldUnit: null };
+
+  it('offers portions, plus weight or volume units with a yield', () => {
+    expect(subRecipeUnits(cream)).toEqual(['portion', 'g', 'kg', 'mg']);
+    expect(subRecipeUnits(base)).toEqual(['portion']);
+    expect(subRecipeUnits({ ...cream, yieldUnit: 'l', yieldQuantity: 1 })).toEqual(['portion', 'ml', 'l']);
+  });
+
+  it('costs a line like the API', () => {
+    expect(subRecipeCost(cream, 2, 'portion')).toBeCloseTo(4.6);
+    expect(subRecipeCost(cream, 0.55, 'kg')).toBeCloseTo(18.4);
+    expect(subRecipeCost(base, 100, 'g')).toBe(0);
+  });
+
+  it('never mixes portions with product units', () => {
+    expect(areCompatible('portion', 'portion')).toBe(true);
+    expect(areCompatible('portion', 'piece')).toBe(false);
+    expect(areCompatible('g', 'portion')).toBe(false);
+  });
+
+  it('writes portions in the right Polish form', () => {
+    expect(formatAmount(1, 'portion')).toBe('1 porcja');
+    expect(formatAmount(3, 'portion')).toBe('3 porcje');
+    expect(formatAmount(10, 'portion')).toBe('10 porcji');
+    expect(formatAmount(250, 'g')).toBe('250 g');
+  });
+});
 
 describe('units', () => {
   it('offers only units of the same kind', () => {

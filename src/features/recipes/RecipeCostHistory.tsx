@@ -12,7 +12,14 @@ const TITLES: Record<RecipeCostChange['reason'], string> = {
   recipe_updated: 'Edycja przepisu',
   recipe_restored: 'Przywrócono przepis',
   product_price_changed: 'Zmiana ceny składnika',
+  sub_recipe_changed: 'Zmiana przepisu składowego',
 };
+
+/** "przez Krem chantilly" / "Zmienił się przepis Krem chantilly": the sub-recipe the change came through. */
+function SubRecipeNote({ subRecipe, through }: { subRecipe: NonNullable<RecipeCostChange['subRecipe']>; through: boolean }) {
+  const link = <Link to={`/recipes/${subRecipe.id}`}>{subRecipe.name}</Link>;
+  return <div className={styles.cause}>{through ? <>przez przepis {link}</> : <>Zmienił się przepis {link}</>}</div>;
+}
 
 /** How the recipe's food cost changed over time, and why, newest first ("Koszty" tab of the history card). */
 export function RecipeCostTimeline({ recipeId }: { recipeId: number }) {
@@ -73,6 +80,7 @@ function toEntry(change: RecipeCostChange): TimelineEntry {
     content: (
       <>
         {cause && <Cause cause={cause} />}
+        {change.subRecipe && <SubRecipeNote subRecipe={change.subRecipe} through={cause !== null} />}
         <div>
           {previous && previous.foodCost !== change.foodCost && `${formatMoney(previous.foodCost)} → `}
           <strong>{formatMoney(change.foodCost)}</strong>

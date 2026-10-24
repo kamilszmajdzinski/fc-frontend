@@ -1,9 +1,12 @@
-import { Fragment, useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { errorMessage } from '../../api/client';
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
+import { Link } from 'react-router';
+import { ApiRequestError, errorMessage } from '../../api/client';
 import { useCreateProduct } from '../../api/products';
-import type { Product, Recipe, RecipeInput, Unit } from '../../api/types';
+import { useRecipeUsedIn } from '../../api/recipes';
+import type { IngredientUnit, Product, Recipe, RecipeInput, RecipeSummary, YieldUnit } from '../../api/types';
 import { Modal } from '../../components/Modal';
 import { FoodCostBadge } from '../../components/FoodCostBadge';
+import { RecipeLinks } from '../../components/RecipeLinks';
 import { SearchSelect, type SearchOption } from '../../components/SearchSelect';
 import { StepperInput } from '../../components/StepperInput';
 import { useToast } from '../../components/Toast';
@@ -22,8 +25,8 @@ import {
   TextArea,
 } from '../../components/ui';
 import { profitability, suggestedPrice, TARGET_FOOD_COST } from '../../lib/foodcost';
-import { formatMoney, toInputValue } from '../../lib/format';
-import { compatibleUnits, unitLabel } from '../../lib/units';
+import { formatMoney, formatQuantity, portionsLabel, toInputValue } from '../../lib/format';
+import { compatibleUnits, subRecipeUnits, unitLabel, YIELD_UNITS } from '../../lib/units';
 import { packageLabel, unitPriceLabel } from '../products/labels';
 import { ProductForm } from '../products/ProductForm';
 import { toProductInput } from '../products/productFormModel';
@@ -36,9 +39,13 @@ import {
   parseSellPrice,
   previewFoodCost,
   rowCost,
+  rowRef,
+  serverRowMessages,
   toRecipeInput,
   validateRecipeForm,
   withProduct,
+  withRecipe,
+  type Catalog,
   type IngredientRow,
   type RecipeFormErrors,
   type RecipeFormValues,
@@ -51,34 +58,67 @@ interface RecipeFormProps {
   /** The recipe being edited. Leave out to create a new one. */
   recipe?: Recipe;
   products: Product[];
+  /** All recipes: the ones that can be used as sub-recipes, and their costs for the preview. */
+  recipes: RecipeSummary[];
   busy: boolean;
-  serverError?: ReactNode;
+  /** The last save's error, if any. */
+  error?: Error | null;
   onSubmit: (input: RecipeInput) => void;
   onCancel: () => void;
 }
 
 const NO_ERRORS: RecipeFormErrors = { rows: {} };
 
-export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCancel }: RecipeFormProps) {
+const PRODUCTS_GROUP = 'Składniki';
+const RECIPES_GROUP = 'Przepisy';
+
+/** "8 porcji · 2,28 zł / porcja · 550 g" for a recipe in the ingredient search. */
+function recipeMeta(recipe: RecipeSummary): string {
+  return [
+    portionsLabel(recipe.portions),
+    `${formatMoney(recipe.costPerPortion)} / porcja`,
+    recipe.yieldQuantity !== null && recipe.yieldUnit ? `${formatQuantity(recipe.yieldQuantity)} ${unitLabel(recipe.yieldUnit)}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+export function RecipeForm({ recipe, products, recipes, busy, error, onSubmit, onCancel }: RecipeFormProps) {
   const id = useId();
   const [values, setValues] = useState(() => initialRecipeForm(recipe));
   const [showErrors, setShowErrors] = useState(false);
+  // The form as it was sent, so the server's "ingredients[2]" points at the right row even after edits.
+  const [submitted, setSubmitted] = useState<RecipeFormValues | null>(null);
   // The "new ingredient" dialog: opened from the header (fills the first empty row) or from a row's search.
   const [newProduct, setNewProduct] = useState<{ rowKey: string | null; name: string } | null>(null);
   // Rows added by the user get focus; rows loaded with the recipe do not.
   const [focusKey, setFocusKey] = useState<string | null>(null);
+  // Recipes that use this one can't become its ingredients (that would be a loop).
+  const usedIn = useRecipeUsedIn(recipe?.id);
 
-  const productsById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
-  const productOptions = useMemo<SearchOption[]>(
-    () =>
-      products.map((product) => ({
-        value: product.id,
-        label: product.name,
-        meta: [product.manufacturer, packageLabel(product), unitPriceLabel(product)].filter(Boolean).join(' · '),
-        keywords: product.manufacturer,
-      })),
-    [products],
+  const catalog = useMemo<Catalog>(
+    () => ({
+      products: new Map(products.map((product) => [product.id, product])),
+      recipes: new Map(recipes.map((r) => [r.id, r])),
+    }),
+    [products, recipes],
   );
+  const options = useMemo<SearchOption<string>[]>(() => {
+    const excluded = new Set([recipe?.id, ...(usedIn.data ?? []).map((r) => r.id)]);
+    const recipeOptions = recipes
+      .filter((r) => !excluded.has(r.id))
+      .map((r) => ({ value: `r:${r.id}`, label: r.name, meta: recipeMeta(r), group: RECIPES_GROUP }));
+    // Headings only when there is something to tell apart.
+    const productGroup = recipeOptions.length > 0 ? PRODUCTS_GROUP : undefined;
+    const productOptions = products.map((product) => ({
+      value: `p:${product.id}`,
+      label: product.name,
+      meta: [product.manufacturer, packageLabel(product), unitPriceLabel(product)].filter(Boolean).join(' · '),
+      keywords: product.manufacturer,
+      group: productGroup,
+    }));
+    return [...productOptions, ...recipeOptions];
+  }, [products, recipes, recipe?.id, usedIn.data]);
   const quantityId = (rowKey: string) => `${id}-quantity-${rowKey}`;
 
   // The row that already holds an ingredient the user just picked again: highlighted with a short note.
@@ -99,17 +139,19 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
    * Picking an ingredient that another row already has doesn't add it twice: the empty row goes away
    * and the existing row's amount gets focus, with a note saying why.
    */
-  function pickProduct(rowKey: string, productId: number) {
-    const picked = productsById.get(productId);
-    if (!picked) return;
+  function pickIngredient(rowKey: string, ref: string) {
+    const [kind, rawId] = ref.split(':');
+    const product = kind === 'p' ? catalog.products.get(Number(rawId)) : undefined;
+    const subRecipe = kind === 'r' ? catalog.recipes.get(Number(rawId)) : undefined;
+    if (!product && !subRecipe) return;
     const current = values.ingredients.find((row) => row.key === rowKey);
-    const existing = values.ingredients.find((row) => row.productId === productId && row.key !== rowKey);
+    const existing = values.ingredients.find((row) => rowRef(row) === ref && row.key !== rowKey);
     if (!existing) {
-      updateRow(rowKey, (row) => withProduct(row, picked));
-      focusQuantity(rowKey);
+      updateRow(rowKey, (row) => (product ? withProduct(row, product) : withRecipe(row, subRecipe!)));
+      focusQuantity(rowKey, !!subRecipe);
       return;
     }
-    if (current?.productId === null) {
+    if (current && rowRef(current) === null) {
       setValues((form) => ({ ...form, ingredients: form.ingredients.filter((row) => row.key !== rowKey) }));
     }
     focusQuantity(existing.key, true);
@@ -118,14 +160,23 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
     duplicateTimer.current = window.setTimeout(() => setDuplicateKey(null), 4000);
   }
 
-  // Products used in each row, so the search can tag the ones already in the recipe.
-  const usedProductIds = values.ingredients.map((row) => row.productId);
-  const errors = validateRecipeForm(values);
+  // What each row holds, so the search can tag the ones already in the recipe.
+  const usedRefs = values.ingredients.map(rowRef);
+  const errors = validateRecipeForm(values, catalog);
   const visible = showErrors ? errors : NO_ERRORS;
   const portions = parsePortions(values.portions);
   const typedSellPrice = parseSellPrice(values.sellPrice);
   const sellPrice = typedSellPrice !== null && Number.isNaN(typedSellPrice) ? null : typedSellPrice;
-  const total = previewFoodCost(values, productsById);
+  const total = previewFoodCost(values, catalog);
+
+  // Server errors: a row's message stays until that row is changed.
+  const apiError = error instanceof ApiRequestError ? error : null;
+  const rowMessages = useMemo(
+    () => (apiError && submitted ? serverRowMessages(apiError.issues, submitted) : {}),
+    [apiError, submitted],
+  );
+  const submittedRows = new Map(submitted?.ingredients.map((row) => [row.key, row]));
+  const yieldConflict = apiError?.code === 'UNIT_CONFLICT' ? apiError.recipes : null;
 
   function set<K extends keyof RecipeFormValues>(key: K, value: RecipeFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -148,7 +199,7 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
   function addCreatedProduct(product: Product, rowKey: string | null) {
     setNewProduct(null);
     const target =
-      values.ingredients.find((row) => row.key === rowKey) ?? values.ingredients.find((row) => row.productId === null);
+      values.ingredients.find((row) => row.key === rowKey) ?? values.ingredients.find((row) => rowRef(row) === null);
     if (target) {
       updateRow(target.key, (row) => withProduct(row, product));
       focusQuantity(target.key);
@@ -171,7 +222,23 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
       setShowErrors(true);
       return;
     }
+    setSubmitted(values);
     onSubmit(toRecipeInput(values));
+  }
+
+  /** The bottom banner. Errors with a place in the form are also shown there. */
+  function serverMessage() {
+    if (!error) return null;
+    if (yieldConflict) {
+      return (
+        <>
+          Nie można usunąć ani zmienić rodzaju wydajności, bo te przepisy używają „{recipe?.name}” w gramach lub
+          mililitrach: <RecipeLinks recipes={yieldConflict} />. Zmień tam jednostkę na porcje albo zachowaj wydajność.
+        </>
+      );
+    }
+    if (Object.keys(rowMessages).length > 0) return 'Nie udało się zapisać — popraw zaznaczone składniki.';
+    return errorMessage(error);
   }
 
   return (
@@ -200,6 +267,35 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
                 increaseLabel="Więcej porcji"
                 invalid={!!visible.portions}
               />
+            </Field>
+            <Field
+              label="Wydajność"
+              htmlFor={`${id}-yield`}
+              error={visible.yield ?? (yieldConflict ? 'Używany w gramach lub ml w innych przepisach — patrz niżej.' : undefined)}
+              hint="ile waży cały przepis — pozwala użyć go w gramach w innych przepisach"
+            >
+              <div className={styles.yieldInputs}>
+                <NumberInput
+                  id={`${id}-yield`}
+                  placeholder="np. 550"
+                  value={values.yieldQuantity}
+                  onChange={(e) => set('yieldQuantity', e.target.value)}
+                  invalid={!!visible.yield || !!yieldConflict}
+                />
+                <Select
+                  aria-label="Jednostka wydajności"
+                  value={values.yieldUnit}
+                  onChange={(e) => set('yieldUnit', e.target.value as YieldUnit | '')}
+                  invalid={!!visible.yield || !!yieldConflict}
+                >
+                  <option value="">—</option>
+                  {YIELD_UNITS.map((unit) => (
+                    <option key={unit} value={unit}>
+                      {unitLabel(unit)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </Field>
             <Field
               label="Cena sprzedaży (zł)"
@@ -247,16 +343,16 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
                 invalid={!!visible.sellPrice}
               />
             </Field>
-            <Field label="Opis" htmlFor={`${id}-description`} error={visible.description}>
-              <Input
-                id={`${id}-description`}
-                placeholder="opcjonalnie, np. na tortownicę 24 cm"
-                value={values.description}
-                onChange={(e) => set('description', e.target.value)}
-                invalid={!!visible.description}
-              />
-            </Field>
           </div>
+          <Field label="Opis" htmlFor={`${id}-description`} error={visible.description} className={styles.description}>
+            <Input
+              id={`${id}-description`}
+              placeholder="opcjonalnie, np. na tortownicę 24 cm"
+              value={values.description}
+              onChange={(e) => set('description', e.target.value)}
+              invalid={!!visible.description}
+            />
+          </Field>
         </Card>
 
         {/* Live: updates as the price or the ingredients change. */}
@@ -298,10 +394,23 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
           )}
           <div className={styles.rows}>
             {values.ingredients.map((row, index) => {
-              const product = row.productId === null ? undefined : productsById.get(row.productId);
+              const ref = rowRef(row);
+              const product = row.kind === 'product' && row.productId !== null ? catalog.products.get(row.productId) : undefined;
+              const subRecipe = row.kind === 'recipe' && row.recipeId !== null ? catalog.recipes.get(row.recipeId) : undefined;
+              const picked = product ?? subRecipe;
               const rowErrors = visible.rows[row.key];
-              const cost = rowCost(row, productsById);
-              const units: Unit[] = product ? compatibleUnits(product.packageUnit) : [row.unit];
+              const cost = rowCost(row, catalog);
+              const units: IngredientUnit[] = product
+                ? compatibleUnits(product.packageUnit)
+                : subRecipe
+                  ? subRecipeUnits(subRecipe)
+                  : [row.unit];
+              // The server's message for this row, until the row is changed.
+              const sent = submittedRows.get(row.key);
+              const rowMessage =
+                sent && rowRef(sent) === ref && sent.unit === row.unit && sent.quantity === row.quantity
+                  ? rowMessages[row.key]
+                  : undefined;
               const setQuantity = (quantity: string) => updateRow(row.key, (r) => ({ ...r, quantity }));
               const quantityProps = {
                 compact: true,
@@ -309,11 +418,11 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
                 'aria-label': `Ilość, składnik ${index + 1}`,
                 placeholder: 'ilość',
                 value: row.quantity,
-                invalid: rowErrors?.quantity,
+                invalid: rowErrors?.quantity || !!rowMessage,
               };
               // Ingredients in other rows get a "już w przepisie" tag in this row's search.
-              const inOtherRows = new Set(usedProductIds.filter((productId, i) => i !== index && productId !== null));
-              const options = productOptions.map((option) =>
+              const inOtherRows = new Set(usedRefs.filter((used, i) => i !== index && used !== null));
+              const rowOptions = options.map((option) =>
                 inOtherRows.has(option.value) ? { ...option, badge: 'już w przepisie' } : option,
               );
               const isDuplicateTarget = duplicateKey === row.key;
@@ -323,19 +432,20 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
                     <div className={styles.product}>
                       <SearchSelect
                         aria-label={`Składnik ${index + 1}`}
-                        placeholder="Wyszukaj składnik…"
-                        options={options}
-                        value={row.productId}
+                        placeholder="Wyszukaj składnik lub przepis…"
+                        options={rowOptions}
+                        value={ref}
                         invalid={rowErrors?.product}
                         autoFocus={row.key === focusKey}
-                        onChange={(productId) => pickProduct(row.key, productId)}
+                        onChange={(value) => pickIngredient(row.key, value)}
                         createLabel={(query) => `+ Dodaj nowy składnik „${query}”`}
+                        createGroup={options.some((option) => option.group) ? PRODUCTS_GROUP : undefined}
                         onCreate={(query) => setNewProduct({ rowKey: row.key, name: query })}
                       />
                     </div>
                     <div className={styles.quantity}>
-                      {/* Ingredients counted in pieces (eggs, vanilla pods) get − / + buttons. */}
-                      {product && row.unit === 'piece' ? (
+                      {/* Ingredients counted in pieces (eggs, vanilla pods) or portions get − / + buttons. */}
+                      {picked && (row.unit === 'piece' || row.unit === 'portion') ? (
                         <StepperInput
                           {...quantityProps}
                           onChange={setQuantity}
@@ -351,8 +461,9 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
                         compact
                         aria-label={`Jednostka, składnik ${index + 1}`}
                         value={row.unit}
-                        disabled={!product}
-                        onChange={(e) => updateRow(row.key, (r) => ({ ...r, unit: e.target.value as Unit }))}
+                        disabled={!picked}
+                        invalid={rowErrors?.unit || !!rowMessage}
+                        onChange={(e) => updateRow(row.key, (r) => ({ ...r, unit: e.target.value as IngredientUnit }))}
                       >
                         {units.map((unit) => (
                           <option key={unit} value={unit}>
@@ -373,8 +484,27 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
                     {/* Floats under the row, so it doesn't push the other rows down. */}
                     {isDuplicateTarget && (
                       <div className={styles.duplicateNote} role="status">
-                        Produkt, który wybrałeś, jest już w przepisie.
+                        {row.kind === 'recipe' ? 'Przepis' : 'Produkt'}, który wybrałeś, jest już w przepisie.
                       </div>
+                    )}
+                    {rowMessage ? (
+                      <div className={cx(styles.rowNote, styles.rowNoteError)}>{rowMessage}</div>
+                    ) : (
+                      // Without a yield, a sub-recipe can only be measured in portions.
+                      subRecipe &&
+                      !subRecipe.yieldUnit && (
+                        <div className={styles.rowNote}>
+                          Przepis bez wydajności — tylko w porcjach.{' '}
+                          <Link
+                            to={`/recipes/${subRecipe.id}/edit`}
+                            target="_blank"
+                            className={styles.inlineAction}
+                            title="Otwiera edycję w nowej karcie, ten formularz zostaje"
+                          >
+                            Ustaw wydajność ↗
+                          </Link>
+                        </div>
+                      )
                     )}
                   </div>
                 </Fragment>
@@ -445,7 +575,7 @@ export function RecipeForm({ recipe, products, busy, serverError, onSubmit, onCa
           </Card>
         )}
 
-        {serverError && <Banner>{serverError}</Banner>}
+        {error && <Banner>{serverMessage()}</Banner>}
 
         <div className={styles.actions}>
           <Button variant="ghost" onClick={onCancel} className={styles.cancel}>

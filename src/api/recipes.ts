@@ -8,6 +8,7 @@ import type {
   RecipeCostChange,
   RecipeInput,
   RecipePatch,
+  RecipeRef,
   RecipeSummary,
   RestoreRecipeResult,
 } from './types';
@@ -19,7 +20,34 @@ export const recipeKeys = {
   detail: (id: number) => ['recipes', 'detail', id] as const,
   costHistories: ['recipes', 'cost-history'] as const,
   costHistory: (id: number) => ['recipes', 'cost-history', id] as const,
+  usedIn: (id: number) => ['recipes', 'used-in', id] as const,
 };
+
+const selectRefs = (data: ListResponse<RecipeRef>) => sortByName(data.items);
+
+/** Recipes that use this one as a sub-recipe (directly). */
+export function useRecipeUsedIn(id: number | undefined) {
+  return useQuery({
+    queryKey: recipeKeys.usedIn(id ?? 0),
+    queryFn: () => request<ListResponse<RecipeRef>>('GET', `/recipes/${id}/used-in`),
+    select: selectRefs,
+    enabled: id !== undefined,
+  });
+}
+
+/**
+ * After a recipe changes, every recipe may have changed: the ones that use it get a new cost
+ * (and cost history), and it may now use, or stop using, others.
+ */
+function invalidateAfterRecipeChange(queryClient: QueryClient, except?: number) {
+  queryClient.invalidateQueries({
+    queryKey: recipeKeys.all,
+    // The deleted recipe's own detail would 404; it's marked stale without a refetch below.
+    predicate: (query) => except === undefined || query.queryKey[2] !== except,
+  });
+  queryClient.invalidateQueries({ queryKey: ['product-usage'] });
+  queryClient.invalidateQueries({ queryKey: changeKeys.all });
+}
 
 // History stays in the API's order: newest first.
 const selectCostChanges = (data: ListResponse<RecipeCostChange>) => data.items;
@@ -69,10 +97,8 @@ function useOnRecipeSaved() {
   const queryClient = useQueryClient();
   return (recipe: Recipe) => {
     queryClient.setQueryData(recipeKeys.detail(recipe.id), recipe);
-    queryClient.invalidateQueries({ queryKey: recipeKeys.list });
+    invalidateAfterRecipeChange(queryClient, recipe.id);
     queryClient.invalidateQueries({ queryKey: recipeKeys.costHistory(recipe.id) });
-    queryClient.invalidateQueries({ queryKey: ['product-usage'] });
-    queryClient.invalidateQueries({ queryKey: changeKeys.all });
   };
 }
 
@@ -110,10 +136,8 @@ export function usePatchRecipe() {
 export async function restoreRecipe(queryClient: QueryClient, id: number): Promise<RestoreRecipeResult> {
   const result = await request<RestoreRecipeResult>('POST', `/recipes/${id}/restore`);
   queryClient.setQueryData(recipeKeys.detail(id), result.recipe);
-  queryClient.invalidateQueries({ queryKey: recipeKeys.list });
+  invalidateAfterRecipeChange(queryClient, id);
   queryClient.invalidateQueries({ queryKey: recipeKeys.costHistory(id) });
-  queryClient.invalidateQueries({ queryKey: ['product-usage'] });
-  queryClient.invalidateQueries({ queryKey: changeKeys.all });
   return result;
 }
 
@@ -130,9 +154,8 @@ export function useDeleteRecipe() {
       // Not removed: the detail page is still mounted and would refetch the deleted recipe.
       queryClient.invalidateQueries({ queryKey: recipeKeys.detail(id), refetchType: 'none' });
       queryClient.invalidateQueries({ queryKey: recipeKeys.costHistory(id), refetchType: 'none' });
-      queryClient.invalidateQueries({ queryKey: recipeKeys.list });
-      queryClient.invalidateQueries({ queryKey: ['product-usage'] });
-      queryClient.invalidateQueries({ queryKey: changeKeys.all });
+      queryClient.invalidateQueries({ queryKey: recipeKeys.usedIn(id), refetchType: 'none' });
+      invalidateAfterRecipeChange(queryClient, id);
     },
   });
 }

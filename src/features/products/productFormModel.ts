@@ -180,7 +180,10 @@ export function priceImpact(values: ProductFormValues, product: Product, recipes
 
   const impact: PriceImpact = { changes: [], conflicts: [] };
   for (const recipe of recipes) {
-    const lines = recipe.ingredients.filter((line) => line.productId === product.id);
+    // Direct use only; recipes that use these through a sub-recipe are recalculated by the API too.
+    const lines = recipe.ingredients.filter(
+      (line): line is typeof line & { unit: Unit } => line.type === 'product' && line.productId === product.id,
+    );
     if (lines.length === 0) continue;
     if (lines.some((line) => !areCompatible(line.unit, next.packageUnit))) {
       impact.conflicts.push({ id: recipe.id, name: recipe.name });

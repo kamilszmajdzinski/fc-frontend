@@ -9,5 +9,8 @@ describe('restoring a recipe', () => {
     expect(describeDropped({ productId: 2, productName: 'Jajka L', quantity: 2, unit: 'piece', reason: 'unit_incompatible' })).toBe(
       '2 szt Jajka L (zmieniona jednostka)',
     );
+    expect(describeDropped({ recipeId: 5, recipeName: 'Krem chantilly', quantity: 2, unit: 'portion', reason: 'recipe_deleted' })).toBe(
+      '2 porcje Krem chantilly (przepis usunięty)',
+    );
   });
 });

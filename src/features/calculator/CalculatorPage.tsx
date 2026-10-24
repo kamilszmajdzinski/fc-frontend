@@ -15,9 +15,9 @@ import {
   TARGET_FOOD_COST,
   type FoodCostLevel,
 } from '../../lib/foodcost';
-import { formatMoney, formatPercent, formatQuantity, parseDecimal, portionsLabel, toInputValue } from '../../lib/format';
+import { formatMoney, formatPercent, parseDecimal, portionsLabel, toInputValue } from '../../lib/format';
 import { useIdParam } from '../../lib/useIdParam';
-import { unitLabel } from '../../lib/units';
+import { formatAmount } from '../../lib/units';
 import styles from './CalculatorPage.module.css';
 
 export function CalculatorPage() {
@@ -178,7 +178,7 @@ function Calculator({ recipes, recipe }: CalculatorProps) {
             detail.data.ingredients.map((line, index) => (
               <div key={index} className={styles.ingredient}>
                 <span className={styles.ingredientName}>
-                  {formatQuantity(line.quantity * scale)} {unitLabel(line.unit)} {line.productName}
+                  {formatAmount(line.quantity * scale, line.unit)} {line.name}
                 </span>
                 <span className={styles.ingredientCost}>{formatMoney(line.cost * scale)}</span>
               </div>

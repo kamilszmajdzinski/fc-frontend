@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Product, Recipe } from '../api/types';
+import type { Product, Recipe, RecipeIngredient, RecipeSummary, Unit } from '../api/types';
 import {
   derivePrices,
   hasPriceChange,
@@ -17,9 +17,14 @@ import {
   hasErrors,
   initialRecipeForm,
   previewFoodCost,
+  rowCost,
+  serverRowMessages,
   toRecipeInput,
+  translateIssue,
   validateRecipeForm,
   withProduct,
+  withRecipe,
+  type Catalog,
 } from './recipes/recipeFormModel';
 
 const butter: Product = {
@@ -38,6 +43,23 @@ const butter: Product = {
 };
 
 const cream: Product = { ...butter, id: 2, name: 'Cream 36%', packageSize: 500, packageUnit: 'ml', pricePerPackage: 9, pricePerUnit: 18, pricingUnit: 'l' };
+
+/** A product line as the API sends it. */
+function productLine(id: number, product: Pick<Product, 'id' | 'name'>, quantity: number, unit: Unit, unitPrice: number, cost: number): RecipeIngredient {
+  return {
+    id,
+    type: 'product',
+    productId: product.id,
+    productName: product.name,
+    recipeId: null,
+    recipeName: null,
+    name: product.name,
+    quantity,
+    unit,
+    unitPrice,
+    cost,
+  };
+}
 
 function edit(product: Product, change: Partial<ProductFormValues>): ProductFormValues {
   return { ...initialProductForm(product), ...change };
@@ -110,9 +132,11 @@ describe('product changes and their effect on recipes', () => {
     foodCost: 15,
     costPerPortion: 1.5,
     sellPrice: null,
+    yieldQuantity: null,
+    yieldUnit: null,
     ingredients: [
-      { id: 1, productId: 1, productName: 'Butter 82%', quantity: 250, unit: 'g', unitPrice: 0.04, cost: 10 },
-      { id: 2, productId: 99, productName: 'Flour', quantity: 1, unit: 'kg', unitPrice: 5, cost: 5 },
+      productLine(1, butter, 250, 'g', 0.04, 10),
+      productLine(2, { id: 99, name: 'Flour' }, 1, 'kg', 5, 5),
     ],
     steps: [],
     createdAt: butter.createdAt,
@@ -122,7 +146,7 @@ describe('product changes and their effect on recipes', () => {
     ...tart,
     id: 8,
     name: 'Butter curls',
-    ingredients: [{ id: 3, productId: 1, productName: 'Butter 82%', quantity: 0.1, unit: 'kg', unitPrice: 40, cost: 4 }],
+    ingredients: [productLine(3, butter, 0.1, 'kg', 40, 4)],
     foodCost: 4,
   };
 
@@ -156,7 +180,7 @@ describe('product changes and their effect on recipes', () => {
     const chantilly: Recipe = {
       ...tart,
       foodCost: 18.23,
-      ingredients: [{ id: 9, productId: 3, productName: 'Sugar', quantity: 50, unit: 'g', unitPrice: 0.0045, cost: 0.23 }],
+      ingredients: [productLine(9, { id: 3, name: 'Sugar' }, 50, 'g', 0.0045, 0.23)],
     };
     const [change] = priceImpact(edit(sugar, { pricePerPackage: '6' }), sugar, [chantilly]).changes;
     expect(change.foodCost).toBe(Math.round(change.foodCost * 100) / 100);
@@ -171,6 +195,18 @@ describe('product changes and their effect on recipes', () => {
     expect(priceImpact(edit(butter, { name: 'Masło' }), butter, [tart]).changes).toEqual([]);
   });
 
+  it('leaves sub-recipe lines to the API', () => {
+    const withCream: Recipe = {
+      ...tart,
+      ingredients: [
+        ...tart.ingredients,
+        { ...productLine(4, butter, 2, 'g', 1, 2), type: 'recipe', productId: null, productName: null, recipeId: 1, recipeName: 'X', unit: 'portion' },
+      ],
+    };
+    const [change] = priceImpact(edit(butter, { pricePerPackage: '10' }), butter, [withCream]).changes;
+    expect(change.foodCost).toBe(17.5); // only the butter line; recipe 1 is not product 1
+  });
+
   it('reports recipes that block a change of unit kind', () => {
     const impact = priceImpact(edit(butter, { packageUnit: 'piece', packageSize: '1' }), butter, [tart, pieces]);
     expect(impact.conflicts).toEqual([
@@ -182,16 +218,43 @@ describe('product changes and their effect on recipes', () => {
 });
 
 describe('recipe form', () => {
-  const products = new Map([butter, cream].map((p) => [p.id, p]));
+  // Chantilly cream: 8 portions, 18.40 in total, yields 550 g.
+  const chantilly: RecipeSummary = {
+    id: 5,
+    name: 'Krem chantilly',
+    description: null,
+    portions: 8,
+    foodCost: 18.4,
+    costPerPortion: 2.3,
+    sellPrice: null,
+    yieldQuantity: 550,
+    yieldUnit: 'g',
+    ingredientCount: 3,
+    updatedAt: butter.updatedAt,
+  };
+  const noYield: RecipeSummary = { ...chantilly, id: 6, name: 'Kruche ciasto', yieldQuantity: null, yieldUnit: null };
+  const catalog: Catalog = {
+    products: new Map([butter, cream].map((p) => [p.id, p])),
+    recipes: new Map([chantilly, noYield].map((r) => [r.id, r])),
+  };
 
-  it('starts a new recipe with one portion, no price and no rows', () => {
-    expect(initialRecipeForm()).toEqual({ name: '', description: '', portions: '1', sellPrice: '', ingredients: [], steps: [] });
+  it('starts a new recipe with one portion, no price, no yield and no rows', () => {
+    expect(initialRecipeForm()).toEqual({
+      name: '',
+      description: '',
+      portions: '1',
+      sellPrice: '',
+      yieldQuantity: '',
+      yieldUnit: '',
+      ingredients: [],
+      steps: [],
+    });
   });
 
   it('flags incomplete ingredient rows', () => {
     const row = emptyIngredientRow();
     const errors = validateRecipeForm({ ...initialRecipeForm(), name: 'Tart', ingredients: [row] });
-    expect(errors.rows[row.key]).toEqual({ product: true, quantity: true });
+    expect(errors.rows[row.key]).toEqual({ product: true, quantity: true, unit: false });
     expect(hasErrors(errors)).toBe(true);
   });
 
@@ -232,7 +295,106 @@ describe('recipe form', () => {
         emptyIngredientRow(), // incomplete, ignored
       ],
     };
-    expect(previewFoodCost(values, products)).toBeCloseTo(8.5);
+    expect(previewFoodCost(values, catalog)).toBeCloseTo(8.5);
+  });
+
+  it('uses a sub-recipe in portions, or by weight when it has a yield', () => {
+    const row = withRecipe(emptyIngredientRow(), chantilly);
+    expect(row).toMatchObject({ kind: 'recipe', recipeId: 5, productId: null, unit: 'portion', quantity: '1' });
+    expect(rowCost({ ...row, quantity: '2' }, catalog)).toBeCloseTo(4.6); // 2 of 8 portions of 18.40
+    expect(rowCost({ ...row, quantity: '275', unit: 'g' }, catalog)).toBeCloseTo(9.2); // half of 550 g
+    expect(rowCost({ ...row, quantity: '0,11', unit: 'kg' }, catalog)).toBeCloseTo(3.68);
+    // Without a yield, grams mean nothing: no cost, and the row is flagged.
+    const grams = { ...withRecipe(emptyIngredientRow(), noYield), quantity: '100', unit: 'g' as const };
+    expect(rowCost(grams, catalog)).toBeNull();
+    const errors = validateRecipeForm({ ...initialRecipeForm(), name: 'Tart', ingredients: [grams] }, catalog);
+    expect(errors.rows[grams.key]).toEqual({ product: false, quantity: false, unit: true });
+  });
+
+  it('switches between products and sub-recipes in a row', () => {
+    const asRecipe = withRecipe({ ...emptyIngredientRow(butter), quantity: '200' }, chantilly);
+    expect(asRecipe).toMatchObject({ kind: 'recipe', unit: 'g', quantity: '200' }); // grams still fit
+    expect(withRecipe(asRecipe, noYield)).toMatchObject({ unit: 'portion', quantity: '1' });
+    expect(withProduct(withRecipe(emptyIngredientRow(), noYield), butter)).toMatchObject({
+      kind: 'product',
+      productId: 1,
+      recipeId: null,
+      unit: 'g',
+    });
+  });
+
+  it('needs both yield fields or neither', () => {
+    const base = { ...initialRecipeForm(), name: 'Krem', ingredients: [{ ...emptyIngredientRow(butter), quantity: '100' }] };
+    expect(validateRecipeForm({ ...base, yieldQuantity: '550' }).yield).toBeDefined();
+    expect(validateRecipeForm({ ...base, yieldUnit: 'g' }).yield).toBeDefined();
+    expect(validateRecipeForm({ ...base, yieldQuantity: '0', yieldUnit: 'g' }).yield).toBeDefined();
+    expect(toRecipeInput({ ...base, yieldQuantity: '0,55', yieldUnit: 'kg' })).toMatchObject({ yieldQuantity: 0.55, yieldUnit: 'kg' });
+    // Always sent, so saving with empty fields removes the yield.
+    expect(toRecipeInput(base)).toMatchObject({ yieldQuantity: null, yieldUnit: null });
+  });
+
+  it('round-trips a recipe with a sub-recipe: GET → form → PUT body', () => {
+    const tart: Recipe = {
+      id: 9,
+      name: 'Tarta z kremem',
+      description: null,
+      portions: 10,
+      foodCost: 20,
+      costPerPortion: 2,
+      sellPrice: null,
+      yieldQuantity: 1.2,
+      yieldUnit: 'kg',
+      ingredients: [
+        productLine(1, butter, 50, 'g', 0.04, 2),
+        {
+          id: 2,
+          type: 'recipe',
+          productId: null,
+          productName: null,
+          recipeId: 5,
+          recipeName: 'Krem chantilly',
+          name: 'Krem chantilly',
+          quantity: 300,
+          unit: 'g',
+          unitPrice: 0.033455,
+          cost: 10.04,
+        },
+      ],
+      steps: [],
+      createdAt: butter.createdAt,
+      updatedAt: butter.updatedAt,
+    };
+    const values = initialRecipeForm(tart);
+    expect(hasErrors(validateRecipeForm(values, catalog))).toBe(false);
+    expect(toRecipeInput(values)).toEqual({
+      name: 'Tarta z kremem',
+      description: null,
+      portions: 10,
+      sellPrice: null,
+      yieldQuantity: 1.2,
+      yieldUnit: 'kg',
+      ingredients: [
+        { productId: 1, quantity: 50, unit: 'g' },
+        { recipeId: 5, quantity: 300, unit: 'g' },
+      ],
+      steps: [],
+    });
+  });
+
+  it('puts server messages on the rows they are about, in Polish', () => {
+    const values = {
+      ...initialRecipeForm(),
+      ingredients: [emptyIngredientRow(butter), withRecipe(emptyIngredientRow(), chantilly)],
+    };
+    const messages = serverRowMessages(
+      [{ path: 'body.ingredients[1].recipeId', message: '"Krem chantilly" already uses this recipe, so this recipe cannot use it' }],
+      values,
+    );
+    expect(messages).toEqual({ [values.ingredients[1].key]: '„Krem chantilly” już zawiera ten przepis, więc nie może być jego składnikiem.' });
+    expect(translateIssue('"Krem chantilly" yields 550 g, so the unit must be one of: portion, mg, g, kg')).toBe(
+      'Dla „Krem chantilly” wybierz jedną z jednostek: porcja, mg, g, kg.',
+    );
+    expect(translateIssue('Something else')).toBe('Something else');
   });
 
   it('builds the API body and drops empty steps', () => {
@@ -244,7 +406,9 @@ describe('recipe form', () => {
       foodCost: 9,
       costPerPortion: 1.13,
       sellPrice: 30,
-      ingredients: [{ id: 50, productId: 2, productName: 'Cream 36%', quantity: 0.5, unit: 'l', unitPrice: 18, cost: 9 }],
+      yieldQuantity: null,
+      yieldUnit: null,
+      ingredients: [productLine(50, cream, 0.5, 'l', 18, 9)],
       steps: ['Whip.'],
       createdAt: butter.createdAt,
       updatedAt: butter.updatedAt,
@@ -258,6 +422,8 @@ describe('recipe form', () => {
       description: null,
       portions: 8,
       sellPrice: 30,
+      yieldQuantity: null,
+      yieldUnit: null,
       ingredients: [{ productId: 2, quantity: 0.5, unit: 'l' }],
       steps: ['Whip.'],
     });

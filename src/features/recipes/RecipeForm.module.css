@@ -6,11 +6,22 @@
 
 .basicGrid {
   display: grid;
-  /* Portions | selling price | description */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  /* Portions | yield | selling price */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr);
   gap: 16px;
   margin-top: 16px;
   align-items: start;
+}
+
+.description {
+  margin-top: 16px;
+}
+
+/* "550" + "g" side by side. */
+.yieldInputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
+  gap: 6px;
 }
 
 .rows {
@@ -114,6 +125,18 @@
   border-left: 1px solid var(--c-border);
   background: var(--c-white);
   transform: rotate(45deg);
+}
+
+/* A line under an ingredient row: why it can't be saved, or a tip about its units. */
+.rowNote {
+  grid-column: 1 / -1;
+  margin-top: -2px;
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.rowNoteError {
+  color: var(--c-red);
 }
 
 .addLink {
@@ -228,10 +251,6 @@
   .basicGrid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-
-  .basicGrid > :last-child {
-    grid-column: 1 / -1;
-  }
 }
 
 .actions {
@@ -253,7 +272,8 @@
   }
 
   .ingredientRow {
-    grid-template-columns: minmax(0, 1fr) 84px 1fr 24px;
+    /* Quantity wide enough for "10" between the − / + buttons. */
+    grid-template-columns: 124px 84px minmax(0, 1fr) 24px;
     grid-template-areas:
       'product product product remove'
       'quantity unit cost .';

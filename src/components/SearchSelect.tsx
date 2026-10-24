@@ -1,11 +1,11 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { matchesSearch, normalizeForSearch } from '../lib/search';
 import { Icon } from './Icon';
 import { cx } from './ui';
 import styles from './SearchSelect.module.css';
 
-export interface SearchOption {
-  value: number;
+export interface SearchOption<V extends string | number = number> {
+  value: V;
   label: string;
   /** Second line under the label, e.g. manufacturer and price. */
   meta?: string;
@@ -13,12 +13,14 @@ export interface SearchOption {
   keywords?: string | null;
   /** Small tag after the label, e.g. "już w przepisie". */
   badge?: string;
+  /** Heading shown above the first option of each group. Options of a group must be next to each other. */
+  group?: string;
 }
 
-interface SearchSelectProps {
-  options: SearchOption[];
-  value: number | null;
-  onChange: (value: number) => void;
+interface SearchSelectProps<V extends string | number> {
+  options: SearchOption<V>[];
+  value: V | null;
+  onChange: (value: V) => void;
   'aria-label': string;
   placeholder?: string;
   invalid?: boolean;
@@ -26,13 +28,15 @@ interface SearchSelectProps {
   /** Adds a last row like "+ Dodaj nowy składnik „…”" for the typed text. */
   onCreate?: (query: string) => void;
   createLabel?: (query: string) => string;
+  /** Group whose names count for "already exists" (no create row for an exact match). Default: all. */
+  createGroup?: string;
 }
 
 /**
  * A select you can type into: the list narrows as you type (ignoring case and Polish accents).
  * Arrow keys move, Enter picks, Escape closes. While open, the current choice shows as the placeholder.
  */
-export function SearchSelect({
+export function SearchSelect<V extends string | number>({
   options,
   value,
   onChange,
@@ -42,7 +46,8 @@ export function SearchSelect({
   autoFocus,
   onCreate,
   createLabel = (query) => `+ Dodaj „${query}”`,
-}: SearchSelectProps) {
+  createGroup,
+}: SearchSelectProps<V>) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -54,7 +59,11 @@ export function SearchSelect({
   const filtered = options.filter((option) => matchesSearch(query, option.label, option.keywords));
   const trimmed = query.trim();
   // Offer to create only what doesn't exist yet, so "Masło 82%" isn't added twice.
-  const exactMatch = options.some((option) => normalizeForSearch(option.label) === normalizeForSearch(trimmed));
+  const exactMatch = options.some(
+    (option) =>
+      (createGroup === undefined || option.group === createGroup) &&
+      normalizeForSearch(option.label) === normalizeForSearch(trimmed),
+  );
   const showCreate = !!onCreate && trimmed !== '' && !exactMatch;
   const count = filtered.length + (showCreate ? 1 : 0);
 
@@ -138,30 +147,36 @@ export function SearchSelect({
       {open && (
         <ul ref={listRef} id={listId} role="listbox" aria-label={ariaLabel} className={styles.list}>
           {filtered.map((option, index) => (
-            <li
-              key={option.value}
-              id={`${listId}-${index}`}
-              data-index={index}
-              role="option"
-              aria-selected={option.value === value}
-              className={cx(
-                styles.option,
-                index === active && styles.active,
-                option.value === value && styles.selected,
+            <Fragment key={option.value}>
+              {option.group && option.group !== filtered[index - 1]?.group && (
+                <li role="presentation" className={styles.group}>
+                  {option.group}
+                </li>
               )}
-              // mousedown, not click: the input must not lose focus (and close the list) first.
-              onMouseDown={(event) => {
-                event.preventDefault();
-                choose(index);
-              }}
-              onMouseEnter={() => setActive(index)}
-            >
-              <span className={styles.labelRow}>
-                <span className={styles.label}>{option.label}</span>
-                {option.badge && <span className={styles.badge}>{option.badge}</span>}
-              </span>
-              {option.meta && <span className={styles.meta}>{option.meta}</span>}
-            </li>
+              <li
+                id={`${listId}-${index}`}
+                data-index={index}
+                role="option"
+                aria-selected={option.value === value}
+                className={cx(
+                  styles.option,
+                  index === active && styles.active,
+                  option.value === value && styles.selected,
+                )}
+                // mousedown, not click: the input must not lose focus (and close the list) first.
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  choose(index);
+                }}
+                onMouseEnter={() => setActive(index)}
+              >
+                <span className={styles.labelRow}>
+                  <span className={styles.label}>{option.label}</span>
+                  {option.badge && <span className={styles.badge}>{option.badge}</span>}
+                </span>
+                {option.meta && <span className={styles.meta}>{option.meta}</span>}
+              </li>
+            </Fragment>
           ))}
           {filtered.length === 0 && <li className={styles.empty}>Brak wyników</li>}
           {showCreate && (

@@ -11,6 +11,8 @@ import {
   fieldLabel,
   formatAmount,
   formatFieldValue,
+  snapshotKey,
+  snapshotName,
   undoableDeletions,
 } from '../../lib/changeLog';
 import { formatMoney, formatTime } from '../../lib/format';
@@ -152,6 +154,16 @@ function describeCause(cause: ChangeEntry, unit: ReturnType<typeof entryUnit>): 
   return 'zmiana opakowania';
 }
 
+/** A line's name, with a "(przepis)" note for a sub-recipe. */
+function SnapshotName({ line }: { line: IngredientSnapshot }) {
+  return (
+    <>
+      {snapshotName(line)}
+      {'recipeId' in line && <span className={styles.subRecipe}> (przepis)</span>}
+    </>
+  );
+}
+
 const BADGE_FIELDS = new Set<FieldChange['field']>(['pricePerUnit', 'foodCost']);
 
 function FieldChangeRow({ change, unit }: { change: FieldChange; unit: ReturnType<typeof entryUnit> }) {
@@ -168,18 +180,18 @@ function FieldChangeRow({ change, unit }: { change: FieldChange; unit: ReturnTyp
         ) : (
           <ul className={styles.diff}>
             {diff.added.map((line) => (
-              <li key={`+${line.productId}`} className={styles.added}>
-                <span className={styles.sign}>+</span> {formatAmount(line)} {line.productName}
+              <li key={`+${snapshotKey(line)}`} className={styles.added}>
+                <span className={styles.sign}>+</span> {formatAmount(line)} <SnapshotName line={line} />
               </li>
             ))}
             {diff.removed.map((line) => (
-              <li key={`-${line.productId}`} className={styles.removed}>
-                <span className={styles.sign}>−</span> {formatAmount(line)} {line.productName}
+              <li key={`-${snapshotKey(line)}`} className={styles.removed}>
+                <span className={styles.sign}>−</span> {formatAmount(line)} <SnapshotName line={line} />
               </li>
             ))}
             {diff.changed.map(({ from, to }) => (
-              <li key={`~${to.productId}`}>
-                <span className={styles.sign}>~</span> {to.productName}: {formatAmount(from)} → {formatAmount(to)}
+              <li key={`~${snapshotKey(to)}`}>
+                <span className={styles.sign}>~</span> <SnapshotName line={to} />: {formatAmount(from)} → {formatAmount(to)}
               </li>
             ))}
           </ul>

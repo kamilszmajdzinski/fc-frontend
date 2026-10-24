@@ -9,8 +9,10 @@ import {
   entryTitle,
   entryUnit,
   fieldLabel,
+  formatAmount,
   formatFieldValue,
   groupByDay,
+  snapshotName,
   undoableDeletions,
 } from './changeLog';
 
@@ -86,9 +88,25 @@ describe('change log text', () => {
   it('diffs ingredient lists by product', () => {
     const line = (productId: number, quantity: number): IngredientSnapshot => ({ productId, productName: `P${productId}`, quantity, unit: 'g' });
     const diff = diffIngredients([line(1, 200), line(2, 300)], [line(1, 250), line(3, 50)]);
-    expect(diff.added.map((l) => l.productId)).toEqual([3]);
-    expect(diff.removed.map((l) => l.productId)).toEqual([2]);
+    expect(diff.added.map(snapshotName)).toEqual(['P3']);
+    expect(diff.removed.map(snapshotName)).toEqual(['P2']);
     expect(diff.changed.map((c) => [c.from.quantity, c.to.quantity])).toEqual([[200, 250]]);
+  });
+
+  it('tells a sub-recipe apart from a product with the same id', () => {
+    const butter: IngredientSnapshot = { productId: 5, productName: 'Masło', quantity: 50, unit: 'g' };
+    const cream = (quantity: number, unit: 'portion' | 'g'): IngredientSnapshot => ({ recipeId: 5, recipeName: 'Krem', quantity, unit });
+    const diff = diffIngredients([butter, cream(2, 'portion')], [butter, cream(300, 'g')]);
+    expect(diff.added).toEqual([]);
+    expect(diff.removed).toEqual([]);
+    expect(diff.changed.map((c) => [snapshotName(c.to), formatAmount(c.from), formatAmount(c.to)])).toEqual([['Krem', '2 porcje', '300 g']]);
+    expect(formatAmount(cream(5, 'portion'))).toBe('5 porcji');
+  });
+
+  it('labels yield changes', () => {
+    expect(fieldLabel('yieldQuantity')).toBe('Wydajność');
+    expect(formatFieldValue('yieldQuantity', 550)).toBe('550');
+    expect(formatFieldValue('yieldUnit', 'kg')).toBe('kg');
   });
 
   it('describes step changes', () => {

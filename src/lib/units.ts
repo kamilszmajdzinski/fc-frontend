@@ -1,4 +1,5 @@
-import type { PricingUnit, Product, Unit } from '../api/types';
+import type { IngredientUnit, PricingUnit, Product, RecipeSummary, Unit, YieldUnit } from '../api/types';
+import { formatQuantity, plural } from './format';
 
 type UnitKind = 'weight' | 'volume' | 'count';
 
@@ -20,15 +21,28 @@ const RECIPE_UNITS: Record<UnitKind, Unit> = { weight: 'g', volume: 'ml', count:
 // Order used in the package unit picker.
 export const PACKAGE_UNITS: Unit[] = ['g', 'kg', 'mg', 'ml', 'l', 'piece'];
 
-export function unitLabel(unit: Unit): string {
-  return unit === 'piece' ? 'szt' : unit;
+// Order used in the recipe yield picker.
+export const YIELD_UNITS: YieldUnit[] = ['g', 'kg', 'mg', 'ml', 'l'];
+
+export function unitLabel(unit: IngredientUnit): string {
+  if (unit === 'piece') return 'szt';
+  if (unit === 'portion') return 'porcja';
+  return unit;
+}
+
+/** "200 g", "1 szt", "2 porcje": a quantity with its unit, with portions in the right Polish form. */
+export function formatAmount(quantity: number, unit: IngredientUnit): string {
+  const label = unit === 'portion' ? plural(quantity, 'porcja', 'porcje', 'porcji') : unitLabel(unit);
+  return `${formatQuantity(quantity)} ${label}`;
 }
 
 export function compatibleUnits(unit: Unit): Unit[] {
   return PACKAGE_UNITS.filter((u) => UNITS[u].kind === UNITS[unit].kind);
 }
 
-export function areCompatible(a: Unit, b: Unit): boolean {
+/** Same kind (weight, volume, count). A portion only matches a portion. */
+export function areCompatible(a: IngredientUnit, b: IngredientUnit): boolean {
+  if (a === 'portion' || b === 'portion') return a === b;
   return UNITS[a].kind === UNITS[b].kind;
 }
 
@@ -55,6 +69,20 @@ type PricedProduct = Pick<Product, 'packageSize' | 'packageUnit' | 'pricePerPack
 export function ingredientCost(product: PricedProduct, quantity: number, unit: Unit): number {
   const unitPrice = product.pricePerPackage / convert(product.packageSize, product.packageUnit, unit);
   return quantity * unitPrice;
+}
+
+type SubRecipe = Pick<RecipeSummary, 'foodCost' | 'portions' | 'yieldQuantity' | 'yieldUnit'>;
+
+/** Units a sub-recipe can be used in: portions, plus weight or volume units when it has a yield. */
+export function subRecipeUnits(recipe: SubRecipe): IngredientUnit[] {
+  return ['portion', ...(recipe.yieldUnit ? compatibleUnits(recipe.yieldUnit) : [])];
+}
+
+/** Live cost of a sub-recipe line, same maths as the backend. */
+export function subRecipeCost(recipe: SubRecipe, quantity: number, unit: IngredientUnit): number {
+  if (unit === 'portion') return recipe.portions > 0 ? (quantity * recipe.foodCost) / recipe.portions : 0;
+  if (!recipe.yieldQuantity || !recipe.yieldUnit || !areCompatible(recipe.yieldUnit, unit)) return 0;
+  return quantity * (recipe.foodCost / convert(recipe.yieldQuantity, recipe.yieldUnit, unit));
 }
 
 /** Value of the stock on hand. inventoryQuantity is in packageUnit. */
